@@ -354,3 +354,462 @@ In our App.jsx file add this code below <p>Pick your favourite episodes</p>
 This code essentially loops over the objects in our episodes array (after it has been populated with data from the api), and populate the dom with this data. Feel free to add or remove data points to your choosing.
 
 Save and you should see some episodes in your browser.
+
+## Some styling
+
+I know I mentioned in Part 1 this tutorial won’t focus on styling but we’re going to do a tiny bit here just to make our app more–navigatable.
+
+- Add the following code to your index.css file
+
+```css
+.episode-layout {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 100vh;
+}
+
+.episode-box {
+  padding: 0.5rem;
+}
+
+.header {
+  align-items: center;
+  background: white;
+  border-bottom: 1px solid black;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  position: sticky;
+  top: 0;
+}
+.header * {
+  margin: 0;
+}
+```
+
+- Just before the closing brace of the style for body add
+
+`font-size: 10px;`
+
+- In your index.js file add this line below the StoreProvider import
+
+`import './index.css';`
+
+- In our App.jsx file in the `<section>` tag above {state.episode.map add a className attribute which should equal episode-layout
+- On the first `<section>` tag inside our episode map, add another className attribute equalling this class episode-box
+- Copy the last `</div>` just before the closing </React.Fragment> tag and place it right below our <p> tag.
+- Finally, give the `<div>` above our `<h1> Rick and Morty </h1>` a className of header.
+
+If you followed those instructions correctly your site should look like this.
+
+If you got lost along the way, here is the full **App.jsx** file with all it’s styling classes.
+
+```javascript
+import React from "react";
+import { Store } from "./Store";
+
+export default function App() {
+  const { state, dispatch } = React.useContext(Store);
+
+  const fetchDataAction = async () => {
+    const data = await fetch(
+      "https://api.tvmaze.com/singlesearch/shows?q=rick-&-morty&embed=episodes"
+    );
+    const dataJSON = await data.json();
+    return dispatch({
+      type: "FETCH_DATA",
+      payload: dataJSON._embedded.episodes
+    });
+  };
+
+  React.useEffect(() => {
+    state.episodes.length === 0 && fetchDataAction();
+  });
+
+  return (
+    <React.Fragment>
+      {console.log(state)}
+      <div className="header">
+        <h1>Rick and Morty</h1>
+        <p>Pick your favourite episodes</p>
+      </div>
+      <section className="episode-layout">
+        {state.episodes.map(episode => {
+          return (
+            <section key={episode.id} className="episode-box">
+              <img
+                src={episode.image.medium}
+                alt={`Rick and Morty ${episode.name}`}
+              />
+              <div>{episode.name}</div>
+              <section>
+                <div>
+                  Season: {episode.season} Number: {episode.number}
+                </div>
+              </section>
+            </section>
+          );
+        })}
+      </section>
+    </React.Fragment>
+  );
+}
+```
+
+## Adding favourites
+
+- Still in our App.jsx file, below our <div> with the season and episode number, add this
+
+```javascript
+<button type="button" onClick={() => toggleFavAction(episode)}>
+  Fav
+</button>
+```
+
+This should hopefully break your app because the toggleFavAction function does not exist. We’ll fix that now.
+
+- Below fetchDataAction write this code
+
+```javascript
+const toggleFavAction = episode =>
+  dispatch({
+    type: "ADD_FAV",
+    payload: episode
+  });
+```
+
+As you can see, all toggleFavAction does is return a dispatch that sends the episode object to the store. You’ve probably guessed what we need to do now.
+
+Open Store.js and add this case above default in our reducer.
+case 'ADD*FAV':
+return {
+...state,
+favourites: [...state.favourites, action.payload]
+};
+As you can see, our \*\_ADD_FAV*\* case updates our favourites array with the new episode object we clicked on.
+
+- Go to your browser and open the dev tools console. If all went well, click on the fav button and you should see our favourites array update.
+
+As you’ve probably figured out the button should toggle a favourite episode not just add one. Let’s amend our **toggleFavAction**.
+
+## Removing favourites
+
+- Go to your toggleFavAction function and change it to look like this
+
+```javascript
+const toggleFavAction = episode => {
+    const episodeInFavourites = state.favourites.includes(episode);
+    let dispatchObj = {
+      type: 'ADD_FAV',
+      payload: episode
+    };
+    if (episodeInFavourites) {
+      const favouritesWithoutEpisode = state.favourites.filter(fav => fav.id !== episode.id)
+      dispatchObj = {
+        type: 'REMOVE_FAV',
+        payload: favouritesWithoutEpisode
+      };
+    }
+    return dispatch(dispatchObj);
+```
+
+Note: The variable names used here are verbose so that it’s easier to understand what is going on, feel free to amend and refactor where you see fit.
+I’ll do a quick run-through of what the above code is doing. Line 2 episodeInFavourites checks if the episode object bassed in from the argument already exists in our favourites array. If it does, then favouritesWithoutEpisode uses the array.filter method to create a new favourites array without that episode, and a different action is dispatched to the reducer.
+
+- In Store.js add this new case to our reducer.
+  case 'REMOVE_FAV':
+
+```javascript
+return {
+  ...state,
+  favourites: action.payload
+};
+```
+
+And after that everything should work, but let’s indicate to the user that something is changing.
+
+Go back to our App.jsx file and let’s update the div with className header to look like this.
+
+```javascript
+<header className="header">
+  <div>
+    <h1>Rick and Morty</h1>
+    <p>Pick your favourite episodes</p>
+  </div>
+  <div>Favourite(s) {state.favourites.length}</div>
+</header>
+```
+
+Go to your `<button>` element and replace the word Fav with this code
+{state.favourites.find(fav => fav.id === episode.id) ? 'Unfav' : 'Fav'}
+This is using the array.find method to check if the id of this episode object exists in the favourites array. If it does, the word Unfav will show.
+
+One more cheeky bit of styling. Locate the `<section>` below `<div>{episode.name}</div>` and give it a style attribute that looks like this.
+
+```javascript
+style={{ display: 'flex', justifyContent: 'space-between' }
+```
+
+Hopefully all has gone well and you have code that does this in your browser.
+
+If you got lost along the way don’t worry. You can grab all the code up until this point below.
+
+[codesandbox.io](https://codesandbox.io/embed/820pqrvr1j)
+
+This is a project which shows off how to use hooks and context to replace Redux.
+
+## Splitting up our code
+
+Before we get to the exciting stuff, let’s do some basic code splitting.
+
+Create a new file called EpisodesList.jsx and give it this code
+
+```javascript
+import React from "react";
+export default function EpisodesList(props) {
+  const { episodes, toggleFavAction, favourites } = props;
+}
+```
+
+You can probably figure out what we’re about to do here. We’re splitting the bit that maps the episodes into it’s own component.
+
+- In App.jsx, copy everything in state.episodes.map and paste them below the const of our EpisodesList.jsx file
+- In EpisodesList.jsx replace state.episodes.map with return episodes.map
+- Where it says state.favourites.find replace that with favourites.find
+  After all that is done your EpisodesList.jsx file should look like this:
+
+```javascript
+import React from "react";
+
+export default function EpisodesList(props) {
+  const { episodes, toggleFavAction, favourites } = props;
+
+  return episodes.map(episode => {
+    return (
+      <section key={episode.id} className="episode-box">
+        <img
+          src={episode.image.medium}
+          alt={`Rick and Morty ${episode.name}`}
+        />
+        <div>{episode.name}</div>
+        <section style={{ display: "flex", justifyContent: "space-between" }}>
+          <div>
+            Season: {episode.season} Number: {episode.number}
+          </div>
+          <button type="button" onClick={() => toggleFavAction(episode)}>
+            {favourites.find(fav => fav.id === episode.id) ? "Unfav" : "Fav"}
+          </button>
+        </section>
+      </section>
+    );
+  });
+}
+```
+
+## Oh hello suspense and lazy
+
+- In your App.jsx file add this line below your imports
+
+```javascript
+const EpisodesList = React.lazy(() => import("./EpisodesList"));
+```
+
+- Nest `<React.Suspense>` tags right inside your <React.Fragment> ones
+- Your opening React.Suspense tag should have this attribute
+
+```javascript
+fallback={<div>Loading...</div>}
+```
+
+- Now remove everything in <section className='episode-layout></section> and replace it with this
+
+```javascript
+<EpisodesList {...props} />
+```
+
+- Above your return keyword add the following code
+
+```javascript
+const props = {
+  episodes: state.episodes,
+  toggleFavAction: toggleFavAction,
+  favourites: state.favourites
+};
+```
+
+Also if you haven’t done so already please delete `{console.log(state)}` from your code.
+And with all that done, save, refresh and everything should work as before with the word ‘Loading…’ for those with a slow connection.
+
+## Adding some routing with Reach/Router
+
+Usually, react projects are routed with react-router by React training, but this time we’re going to try out Reach. A newer, more accessible router for React. If you’ve used react-router before the API for reach is quite similar.
+
+## Install reach router with
+
+`npm install @reach/router`
+Once that’s done, in your App.jsx file add the following code inside your <header> below the closing <div>
+
+```html
+<div>
+  <Link to='/'>Home</Link>{' '}
+  <Link to='/faves'>Favourite(s) {state.favourites.length}</Link>
+</div>
+```
+
+Remove the old favourites div
+
+`<div>Favourite(s) {state.favourites.length}</div>`
+
+- And import Link from reach/router
+
+```javascript
+import { Link } from "@reach/router";
+```
+
+Save and look at the page. You’ll notice we have some links at the top right corner. Let’s make some pages for these links.
+
+## Moving things around
+
+- Create two files, HomePage.jsx and FavPage.jsx inside the same directory as App.jsx
+- In App.jsx cut all our actions, our props const, and our React.Effect and paste them in HomePage.jsx
+- Cut the lazy EpisodeList import from App.js and paste it in HomePage.jsx along with the other imports
+- Then in the return part of HomePage.jsx add a parent React.Fragment with a child React.Suspense, with a child section, then the EpisodeList component with it’s props.
+- At the end of this all your HomePage.jsx should look like this:
+
+In App.jsx on the line that has export default, add the argument props to the App function and add {props.children} above the closing </React.Fragment> tag.
+The code in your App.jsx file should now look like this:
+
+```javascript
+import React from "react";
+import { Store } from "./Store";
+
+const EpisodesList = React.lazy(() => import("./EpisodesList"));
+
+export default function HomePage() {
+  const { state, dispatch } = React.useContext(Store);
+
+  const toggleFavAction = episode => {
+    const episodeInFavourites = state.favourites.includes(episode);
+    let dispatchObj = {
+      type: "ADD_FAV",
+      payload: episode
+    };
+    if (episodeInFavourites) {
+      const favouritesWithoutEpisode = state.favourites.filter(
+        fav => fav.id !== episode.id
+      );
+      dispatchObj = {
+        type: "REMOVE_FAV",
+        payload: favouritesWithoutEpisode
+      };
+    }
+    return dispatch(dispatchObj);
+  };
+
+  const fetchDataAction = async () => {
+    const data = await fetch(
+      "https://api.tvmaze.com/singlesearch/shows?q=rick-&-morty&embed=episodes"
+    );
+    const dataJSON = await data.json();
+    return dispatch({
+      type: "FETCH_DATA",
+      payload: dataJSON._embedded.episodes
+    });
+  };
+
+  const props = {
+    episodes: state.episodes,
+    toggleFavAction: toggleFavAction,
+    favourites: state.favourites
+  };
+
+  React.useEffect(() => {
+    state.episodes.length === 0 && fetchDataAction();
+  });
+
+  return (
+    <React.Fragment>
+      <React.Suspense fallback={<div>Loading...</div>}>
+        <section className="episode-layout">
+          <EpisodesList {...props} />
+        </section>
+      </React.Suspense>
+    </React.Fragment>
+  );
+}
+```
+
+- In your index.js file add an import for the HomePage and a Router from reach/router
+
+```javascript
+import HomePage from "./HomePage";
+import { Router } from "@reach/router";
+```
+
+- Now replace the code nested in `<StoreProvider>` with this
+
+  ```javascript
+  <StoreProvider>
+    <Router>
+      <App path="/">
+        <HomePage path="/" />
+      </App>
+    </Router>
+  </StoreProvider>
+  ```
+
+- Save your files and refresh the browser, your site should have some simple navigation between two pages with the same header component.
+
+Everything we’ve done so far could have been done without the redux pattern. We could have one component that could fetch data and populate a page in regular react. What we’re about to do from here on I hope will show you why we went about creating this project the ‘redux’ way.
+
+## Adding our favourites page
+
+This page will look very similar to our HomePage.jsx file but only show the episodes in our favourites array, this is a simple thing to achieve.
+
+Note: In the interest of time I will copy and paste similar code, however, you are welcome to look at the final code on github or codesbox to see the refactored version.
+
+- In your FavePage.jsx file populate it with the following code
+
+```javascript
+import React from "react";
+import { Store } from "./Store";
+const EpisodesList = React.lazy(() => import("./EpisodesList"));
+export default function FavPage() {
+  const { state, dispatch } = React.useContext(Store);
+  const props = {
+    episodes: state.favourites,
+    toggleFavAction: toggleFavAction,
+    favourites: state.favourites
+  };
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <div className="episode-layout">
+        <EpisodesList {...props} />
+      </div>
+    </React.Suspense>
+  );
+}
+```
+
+As you can see here the main difference between this file and the HomePage.jsx file is the props const for the episodes key in the object has state.favourites as a value instead of state.episodes.
+
+- Copy the toggleFavAction function from HomePage.jsx to FavPage.jsx right above the props const.
+- Now go to your index.js file and below
+
+  ```javascript <HomePage path='/' /> add
+  <FavPage path="/faves" />
+  ```
+
+- And import your FavPage with the rest of the imports
+
+```javascript
+import FavPage from "./FavPage";
+```
+
+- Save your code, refresh the browser and you should be able to add, view, and remove your favourite Rick and Morty episodes.
+
+Here is a great example of the app level state being shared and changed by different components. Episodes can be added and removed on HomePage.jsx which is read and can be changed by the FavPage.jsx, the App.jsx displays the length of the favourite episodes each time they change. All this one app level state and no component level states. All without the need to download loads of extra packages, pretty cool right?
+
+## Conclusion
+
+As you can see with the power of the context api and react hooks it is entirely possible to omit redux altogether for small to medium-sized applications. I know redux has some benefits that this option doesn’t, middleware and some great developer tools but it’s very confusing for a newcomer and this process is a bit simpler and doesn’t require you to download more plugins which keeps your app lean.
