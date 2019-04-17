@@ -13,6 +13,11 @@ export default function App() {
       payload: dataJSON._embedded.episodes
     });
   };
+  const toggleFavAction = episode =>
+    dispatch({
+      type: "ADD_FAV",
+      payload: episode
+    });
   React.useEffect(() => {
     state.episodes.length === 0 && fetchDataAction();
   });
@@ -36,6 +41,9 @@ export default function App() {
                 <div>
                   Season: {episode.season} Number: {episode.number}
                 </div>
+                <button type="button" onClick={() => toggleFavAction(episode)}>
+                  Fav
+                </button>
               </section>
             </section>
           );
