@@ -13,21 +13,36 @@ export default function App() {
       payload: dataJSON._embedded.episodes
     });
   };
-  const toggleFavAction = episode =>
-    dispatch({
+  const toggleFavAction = episode => {
+    const episodeInFavourites = state.favourites.includes(episode);
+    let dispatchObj = {
       type: "ADD_FAV",
       payload: episode
-    });
+    };
+    if (episodeInFavourites) {
+      const favouritesWithoutEpisode = state.favourites.filter(
+        fav => fav.id !== episode.id
+      );
+      dispatchObj = {
+        type: "REMOVE_FAV",
+        payload: favouritesWithoutEpisode
+      };
+    }
+    return dispatch(dispatchObj);
+  };
   React.useEffect(() => {
     state.episodes.length === 0 && fetchDataAction();
   });
   return (
     <React.Fragment>
       {console.log(state)}
-      <div className="header">
-        <h1>Rick and Morty</h1>
-        <p>Pick your favourite episodes</p>
-      </div>
+      <header className="header">
+        <div>
+          <h1>Rick and Morty</h1>
+          <p>Pick your favourite episodes</p>
+        </div>
+        <div>Favourite(s) {state.favourites.length}</div>
+      </header>
       <section className="episode-layout">
         {state.episodes.map(episode => {
           return (
@@ -37,12 +52,16 @@ export default function App() {
                 alt={`Rick and Morty ${episode.name}`}
               />
               <div>{episode.name}</div>
-              <section>
+              <section
+                style={{ display: "flex", justifyContent: "space-between" }}
+              >
                 <div>
                   Season: {episode.season} Number: {episode.number}
                 </div>
                 <button type="button" onClick={() => toggleFavAction(episode)}>
-                  Fav
+                  {state.favourites.find(fav => fav.id === episode.id)
+                    ? "Unfav"
+                    : "Fav"}
                 </button>
               </section>
             </section>

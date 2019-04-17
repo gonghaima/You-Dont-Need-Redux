@@ -16,6 +16,11 @@ function reducer(state, action) {
         ...state,
         favourites: [...state.favourites, action.payload]
       };
+    case "REMOVE_FAV":
+      return {
+        ...state,
+        favourites: action.payload
+      };
     default:
       return state;
   }
